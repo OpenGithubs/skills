@@ -1,0 +1,86 @@
+name: Validate Skills
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate SKILL.md files
+        run: |
+          python3 << 'PYEOF'
+          import os
+          import re
+          import sys
+
+          errors = []
+          warnings = []
+          skills_dir = "skills"
+
+          if not os.path.isdir(skills_dir):
+              print(f"SKIP: {skills_dir}/ directory not found")
+              sys.exit(0)
+
+          for skill_name in sorted(os.listdir(skills_dir)):
+              skill_path = os.path.join(skills_dir, skill_name)
+              skill_md = os.path.join(skill_path, "SKILL.md")
+
+              if not os.path.isdir(skill_path):
+                  continue
+
+              if not os.path.isfile(skill_md):
+                  errors.append(f"{skill_name}: missing SKILL.md")
+                  continue
+
+              with open(skill_md, "r") as f:
+                  content = f.read()
+
+              # Check YAML frontmatter
+              if not content.startswith("---"):
+                  errors.append(f"{skill_name}: SKILL.md missing YAML frontmatter")
+                  continue
+
+              end = content.find("---", 3)
+              if end == -1:
+                  errors.append(f"{skill_name}: SKILL.md frontmatter not closed")
+                  continue
+
+              frontmatter = content[3:end].strip()
+
+              # Check required fields
+              if not re.search(r"^name:\s*\S+", frontmatter, re.MULTILINE):
+                  errors.append(f"{skill_name}: missing 'name' field in frontmatter")
+
+              if not re.search(r"^description:\s*\S+", frontmatter, re.MULTILINE):
+                  errors.append(f"{skill_name}: missing 'description' field in frontmatter")
+
+              # Recommendation (not blocking): H1 heading
+              body = content[end + 3:].lstrip()
+              if body and not body.startswith("# "):
+                  warnings.append(f"{skill_name}: consider adding H1 heading after frontmatter")
+
+          if warnings:
+              print("WARNINGS:")
+              for w in warnings:
+                  print(f"  ⚠️  {w}")
+              print()
+
+          if errors:
+              print("VALIDATION FAILED:")
+              for e in errors:
+                  print(f"  ❌ {e}")
+              sys.exit(1)
+          else:
+              skill_count = len([d for d in os.listdir(skills_dir)
+                                if os.path.isdir(os.path.join(skills_dir, d))
+                                and os.path.isfile(os.path.join(skills_dir, d, "SKILL.md"))])
+              print(f"✅ All {skill_count} skills passed validation!")
+              if warnings:
+                  print(f"   ({len(warnings)} non-blocking warnings)")
+          PYEOF
