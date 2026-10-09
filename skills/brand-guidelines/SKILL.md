@@ -71,3 +71,8 @@ To access Anthropic's official brand identity and style resources, use this skil
 - Uses RGB color values for precise brand matching
 - Applied via python-pptx's RGBColor class
 - Maintains color fidelity across different systems
+
+## Dependencies
+
+- **python-pptx**: `pip install python-pptx` for PowerPoint generation with brand colors
+- **Poppins and Lora fonts**: Pre-install for best results (fallback to Arial/Georgia if unavailable)
